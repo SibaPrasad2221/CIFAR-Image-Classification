@@ -1,0 +1,139 @@
+from keras.datasets import cifar10                                 #load the data
+from matplotlib import pyplot as plt   
+from keras.utils import to_categorical  
+from keras.models import Sequential                                #Build the CNN(convolutional neural network)
+from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D
+import cv2
+import numpy as np
+import os
+import glob
+
+                                           #-----------------------------BUILD THE MODEL------------------------------------
+
+(x_train,y_train),(x_test,y_test)=cifar10.load_data()  #load the data 
+
+print("type of the variable : ",type(x_train))  #print the data types
+
+print("shape of the x_train :",x_train.shape)  #print the shapes  it means x_train contain 50,000 rows 32 / 32 pixel images with the depth 3 ie;visible widthness (RGB)
+ 
+print(x_train[0])     #show first image(index=0) from the training dataset  by numpy array format
+
+img =plt.imshow(x_train[0])              #show first image(index=0) from the training dataset  by picture format
+print(img)
+
+print("the label is: ",y_train[0])   #to print the label of the image 
+                                          ##zero-label is for :AEROPLANE
+                                          ##first label is for :AUTOMOBILE
+                                          ##second label is for: BIRD
+                                          ##third label is for : CAT
+                                          #fourth label is for :DEER
+                                          #fifth label is for: DOG
+                                          #sixth label is for :FROG
+                                          #seventh label is for: HORSE
+                                          #eighth label is for :SHEEP
+                                          #ninth label is for: TRUCK
+
+#one-hot coding :convert the labels into a set of 10 numbers to input into the neural network
+y_train_one_hot=to_categorical(y_train)
+y_test_one_hot=to_categorical(y_test)
+
+print(y_train_one_hot) #print the new lables in the training datasets(op:set of 10 digits in each row)
+
+print("the one hot label is: ",y_train_one_hot[0])  #print an example of new laebels(op:here at the index-6 ,value is 1 that means for frog)
+
+x_train=x_train/255    #Normalize the pixels in the images to be values between 0 and 1 (ie;here 0/255=0 and 255/255=1)
+x_test=x_test/255
+
+
+
+mymodel1 = Sequential() #create the architecture
+
+print(mymodel1)
+mymodel1.add(Conv2D(32,(5,5),activation="relu",input_shape=(32,32,3)) )   #convolutional layer  (32-channels -convolutinal kernel,(5,5):-five rows and five columns),(32,32,3):32/32 pixels with the depth of 3
+
+mymodel1.add(MaxPooling2D(pool_size=(2,2))) #maxpooling layer #means now image will be formed by 16/16 pixels which are 32/32 pixel previously
+
+mymodel1.add(Conv2D(32,(5,5),activation="relu") )   #'relu':rectifier linear unit
+
+mymodel1.add(MaxPooling2D(pool_size=(2,2)))
+
+mymodel1.add(Flatten()) #flatten layer
+
+mymodel1.add(Dense(1000,activation='relu'))
+
+mymodel1.add(Dense(10,activation='softmax'))
+
+mymodel1.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['accuracy'])#compile the model
+
+hist=mymodel1.fit(x_train,y_train_one_hot,batch_size=256,epochs=10,validation_split=0.3)#train the model
+
+mymodel1.evaluate(x_test,y_test_one_hot)[1]   #get the model accuracy
+
+
+
+
+                                     #------------------------------THIS IS FOR MODEL LOSS-----------------------
+
+plt.plot(hist.history['loss'])    #visualize the models loss
+plt.plot(hist.history['val_loss'])
+plt.title('model_loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['Train','Val'],loc='upper right')
+plt.show()
+
+
+
+
+                                   #----------------------------CODE IS FOR GET THE ACCURACY OF ONE IMAGE(GIVEN SPECIFIC PATH)--------------------------
+#load the image data 
+
+img = cv2.imread('C:\\Users\\SIB\\Desktop\\SFS\\images\\dog5.jpeg',0) # reads image 'opencv-logo.png' as grayscale
+plt.imshow(img, cmap='gray')  #show the image
+#resize the image
+from skimage.transform import resize  
+img_resized=resize(img,(32,32,3))
+plt.imshow(img_resized)
+
+
+prob2=mymodel1.predict(np.array([img_resized,]))
+print("predicted matrix:",prob2)                 #get the probabiity for each class
+
+number_to_class=['aeroplane','automobile','bird','cat','deer','dog','frog','horse','ship','truck']
+index=np.argsort(prob2[0,:]) #get the array value in ascending order
+
+print('the class is :',number_to_class[index[9]])
+print("--it's accuracy is: ",prob2[0,index[9]])
+
+
+
+
+
+
+
+                                  #----------------------------CODE IS FOR GET THE ACCURACY OF ALL IMAGES FROM THE FOLDER--------------------------
+
+img_dir = "C:/Users/SIB/Desktop/SFS/images"         # Enter Directory/path of all images folder
+data_path = os.path.join(img_dir,'*g')
+files = glob.glob(data_path)
+data = []
+for f1 in files:
+    img = cv2.imread(f1)
+    data.append(img)
+for i in range(1,34):
+    #resize the image
+    from skimage.transform import resize  
+    img_resized=resize(data[i],(32,32,3))
+    #get the probabiity for each class
+    import numpy as np
+    prob2=mymodel1.predict(np.array([img_resized,]))
+    print("predicted matrix:",prob2)
+    number_to_class=['aeroplane','automobile','bird','cat','deer','dog','frog','horse','ship','truck']
+    index=np.argsort(prob2[0,:]) #get the array value in ascending order
+    print('The image-{0} from the folder is :{1}'.format(i,number_to_class[index[9]]))
+    print("--it's accuracy is: ",prob2[0,index[9]])
+    print("\n")
+    print("\n")
+
+
+
